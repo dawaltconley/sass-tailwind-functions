@@ -50,7 +50,7 @@
     "jest": "^27.0.4",
     "lint-staged": "^11.0.0",
     "prettier": "^2.0.1",
-    "sass": "^1.38.0"
+    "sass": "^1.58.3"
   },
   "dependencies": {
     "color-convert": "^2.0.1",

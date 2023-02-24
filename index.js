@@ -58,17 +58,21 @@ module.exports = (sass, tailwindConfig) => {
 
   function convertToSass(themeValue, isComma = true) {
     if (typeof themeValue === 'string') {
+      console.log('is string');
       return convertString(themeValue);
     }
     if (Array.isArray(themeValue)) {
+      console.log('is isArray', themeValue);
       const list = sassUtils.castToSass(themeValue.map(convertToSass));
       list.setSeparator(isComma);
       return list;
     }
     if (themeValue == null) {
+      console.log('is isNull', themeValue);
       return sass.types.Null.NULL;
     }
     if (typeof themeValue === 'object') {
+      console.log('is object', themeValue);
       const result = {};
       for (const [key, value] of Object.entries(themeValue)) {
         result[key] = convertToSass(value);
@@ -76,21 +80,64 @@ module.exports = (sass, tailwindConfig) => {
       return sassUtils.castToSass(result);
     }
 
+    console.log('returning using castToSass');
     return sassUtils.castToSass(themeValue);
   }
 
-  const themeFn = (keys, dflt, listSep) => {
+  const getValue = (sassValue) =>
+    sassValue.getValue ? sassValue.getValue() : sassValue;
+
+  const toString = (sassValue) => {
+    const value = getValue(sassValue);
+    console.log(value, value.text, value.toString());
+    return value.text ?? value.toString();
+  };
+
+  // const isEmpty = (sassValue) => {
+  //   const string = toString(sassValue);
+  //   return string === EMPTY || string === `"${EMPTY}"`;
+  // };
+
+  // const isNull = (sassValue) => {
+  //   console.log('has getValue', !!sassValue.getValue);
+  //   console.log('has realNull', !!sassValue.realNull);
+  //   console.log('is sass.NULL', sassValue === sass.NULL);
+  //   return sassValue.realNull
+  //     ? sassValue.realNull() === null
+  //     : sassValue === sass.NULL;
+  //   // console.log('has getValue', !!sassValue.getValue);
+  //   // let normalized = getValue(sassValue);
+  //   // console.log('has realNull', !!sassValue.realNull);
+  //   // if (normalized.realNull) normalized = normalized.realNull();
+  //   // console.log('has NULL', !!sassValue.realNull);
+  //   // console.log('normalized');
+  //   // console.log(normalized);
+  //   // return normalized === null;
+  //   // // normalized = normalized.realNull ?
+  // };
+  //
+  // const notNull = (sassValue) => sassValue;
+
+  // const themeFn = (keys, dflt, listSep) => {
+  const themeFn = (args) => {
+    const [keys, dflt, listSep] = args;
     sassUtils.assertType(listSep, 'string');
 
-    const isComma = listSep.getValue().trim() === ',';
+    // console.log(listSep);
+    // console.log(getValue(listSep));
+    const isComma = toString(listSep).trim() === ',';
 
-    const hasDefault = dflt.getValue?.() !== EMPTY;
+    // console.log({ dflt });
+
+    const hasDefault = toString(dflt) !== EMPTY;
+    // const hasDefault = !isEmpty(dflt);
+    // console.log(hasDefault, isNull(dflt), EMPTY);
 
     let path;
     if (sassUtils.isType(keys, 'list')) {
       path = sassUtils.castToJs(keys);
     } else {
-      path = toPath(keys.getValue());
+      path = toPath(toString(keys));
     }
 
     let current;
@@ -100,6 +147,7 @@ module.exports = (sass, tailwindConfig) => {
 
     const transform = themeTransforms[themeSection];
 
+    console.log({ path });
     while (itemValue && path.length) {
       current = path.shift();
 
@@ -136,14 +184,15 @@ module.exports = (sass, tailwindConfig) => {
     if (itemValue == null) {
       return dflt;
     }
-
-    return convertToSass(itemValue, isComma);
+    const result = convertToSass(itemValue, isComma);
+    console.log({ result });
+    return result;
   };
 
   function screenFn(breakpoint) {
     sassUtils.assertType(breakpoint, 'string');
 
-    const screen = breakpoint.getValue();
+    const screen = getValue(breakpoint);
     if (theme.screens[screen] === undefined) {
       throw new Error(`The '${screen}' screen does not exist in your theme.`);
     }
@@ -153,6 +202,6 @@ module.exports = (sass, tailwindConfig) => {
   return {
     [`theme($keys, $defaultValue: "${EMPTY}", $list-separator: ",")`]: themeFn,
     'screen($screen)': screenFn,
-    'e($str)': (str) => new sass.types.String(escapeClassName(str.getValue())),
+    'e($str)': (str) => new sass.types.String(escapeClassName(getValue(str))),
   };
 };
