@@ -1,8 +1,9 @@
 // @ts-expect-error no types
-const colorConvert = require('color-convert');
-const colorString = require('color-string');
+// const colorConvert = require('color-convert');
+// const colorString = require('color-string');
 const toPath = require('lodash/toPath');
-const SassUtils = require('node-sass-utils');
+// const SassUtils = require('node-sass-utils');
+const { toSass, fromSass } = require('sass-cast/legacy');
 const buildMediaQuery =
   require('tailwindcss/lib/util/buildMediaQuery').default;
 const escapeClassName =
@@ -12,7 +13,7 @@ const resolveConfig = require('tailwindcss/resolveConfig');
 const EMPTY = '@@EMPTY@@';
 
 module.exports = (sass, tailwindConfig) => {
-  const sassUtils = SassUtils(sass);
+  // const sassUtils = SassUtils(sass);
   const { theme } = resolveConfig(require(tailwindConfig));
 
   const themeTransforms = {
@@ -24,73 +25,76 @@ module.exports = (sass, tailwindConfig) => {
     },
   };
 
-  const convertString = (result) => {
-    let color;
-
-    if (result.startsWith('#')) {
-      color = colorConvert.hex.rgb(result);
-    }
-    if (result.startsWith('rgb')) {
-      color = colorString.get.rgb(result);
-    }
-    if (result.startsWith('hsl')) {
-      color = colorConvert.hsl.rgb(colorString.get.hsl(result));
-    }
-    if (result.startsWith('hwb')) {
-      color = colorConvert.hwb.rgb(colorString.get.hwb(result));
-    }
-
-    if (color) {
-      return new sass.types.Color(...color);
-    }
-
-    const numeric = result.match(/([0-9.]+)([a-zA-Z]*)/);
-
-    // If the string has a unit
-    if (numeric) {
-      return sassUtils.castToSass(
-        new sassUtils.SassDimension(parseFloat(numeric[1]), numeric[2]),
-      );
-    }
-
-    return sassUtils.castToSass(result);
-  };
-
-  function convertToSass(themeValue, isComma = true) {
-    if (typeof themeValue === 'string') {
-      return convertString(themeValue);
-    }
-    if (Array.isArray(themeValue)) {
-      const list = sassUtils.castToSass(themeValue.map(convertToSass));
-      list.setSeparator(isComma);
-      return list;
-    }
-    if (themeValue == null) {
-      return sass.types.Null.NULL;
-    }
-    if (typeof themeValue === 'object') {
-      const result = {};
-      for (const [key, value] of Object.entries(themeValue)) {
-        result[key] = convertToSass(value);
-      }
-      return sassUtils.castToSass(result);
-    }
-
-    return sassUtils.castToSass(themeValue);
+  // const convertString = (result) => {
+  //   return toSass(result, { parseUnquotedStrings: true });
+  //   // let color;
+  //   //
+  //   // if (result.startsWith('#')) {
+  //   //   color = colorConvert.hex.rgb(result);
+  //   // }
+  //   // if (result.startsWith('rgb')) {
+  //   //   color = colorString.get.rgb(result);
+  //   // }
+  //   // if (result.startsWith('hsl')) {
+  //   //   color = colorConvert.hsl.rgb(colorString.get.hsl(result));
+  //   // }
+  //   // if (result.startsWith('hwb')) {
+  //   //   color = colorConvert.hwb.rgb(colorString.get.hwb(result));
+  //   // }
+  //   //
+  //   // if (color) {
+  //   //   return new sass.types.Color(...color);
+  //   // }
+  //   //
+  //   // const numeric = result.match(/([0-9.]+)([a-zA-Z]*)/);
+  //   //
+  //   // // If the string has a unit
+  //   // if (numeric) {
+  //   //   return toSass(
+  //   //     (parseFloat(numeric[1]), numeric[2]),
+  //   //   );
+  //   // }
+  //   //
+  //   // return sassUtils.castToSass(result);
+  // };
+  //
+  function convertToSass(themeValue /* , isComma = true */) {
+    return toSass(themeValue, { parseUnquotedStrings: true });
+    // if (typeof themeValue === 'string') {
+    //   return convertString(themeValue);
+    // }
+    // if (Array.isArray(themeValue)) {
+    //   const list = sassUtils.castToSass(themeValue.map(convertToSass));
+    //   list.setSeparator(isComma);
+    //   return list;
+    // }
+    // if (themeValue == null) {
+    //   return sass.types.Null.NULL;
+    // }
+    // if (typeof themeValue === 'object') {
+    //   const result = {};
+    //   for (const [key, value] of Object.entries(themeValue)) {
+    //     result[key] = convertToSass(value);
+    //   }
+    //   return sassUtils.castToSass(result);
+    // }
+    //
+    // return sassUtils.castToSass(themeValue);
   }
 
   const themeFn = (keys, dflt, listSep) => {
-    sassUtils.assertType(listSep, 'string');
+    // const [keys, dflt, listSep] = args.map(fromSass);
+    // sassUtils.assertType(listSep, 'string');
 
-    const isComma = listSep.getValue().trim() === ',';
+    const isComma = fromSass(listSep).trim() === ',';
 
-    const hasDefault = dflt.getValue?.() !== EMPTY;
+    const hasDefault = fromSass(dflt) !== EMPTY;
 
-    let path;
-    if (sassUtils.isType(keys, 'list')) {
-      path = sassUtils.castToJs(keys);
-    } else {
-      path = toPath(keys.getValue());
+    // let path, keyValue = fromSass(keys);
+    let path = fromSass(keys);
+    console.log({ path });
+    if (!Array.isArray(path)) {
+      path = toPath(path);
     }
 
     let current;
@@ -99,6 +103,7 @@ module.exports = (sass, tailwindConfig) => {
     const themeSection = pristinePath[0];
 
     const transform = themeTransforms[themeSection];
+    console.log({ path });
 
     while (itemValue && path.length) {
       current = path.shift();
@@ -141,7 +146,7 @@ module.exports = (sass, tailwindConfig) => {
   };
 
   function screenFn(breakpoint) {
-    sassUtils.assertType(breakpoint, 'string');
+    // sassUtils.assertType(breakpoint, 'string');
 
     const screen = breakpoint.getValue();
     if (theme.screens[screen] === undefined) {
