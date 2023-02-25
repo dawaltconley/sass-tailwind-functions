@@ -1,17 +1,13 @@
-const { List, OrderedMap } = require('immutable');
 const sass = require('sass');
-// const { fromSass } = require('sass-cast');
-// const { toSass } = require('sass-cast/legacy');
-const escapeClassName =
-  require('tailwindcss/lib/util/escapeClassName').default;
+const { List, OrderedMap } = require('immutable');
+const { fromSass, toSass } = require('sass-cast');
+const { toSass } = require('sass-cast/legacy');
 
-const sassThemeFn = require('./index');
-
-// const toLegacy = (sassValue) =>
-//   toSass(fromSass(sassValue), {
-//     parseUnquotedStrings: true,
-//     quotes: null,
-//   });
+const toLegacy = (sassValue) =>
+  toSass(fromSass(sassValue), {
+    parseUnquotedStrings: true,
+    quotes: null,
+  });
 const toModern = (sassValue) => sassValue.dartValue ?? sassValue;
 
 const toLegacy2 = (object) => {
@@ -33,7 +29,7 @@ const toLegacy2 = (object) => {
     );
   }
   if (object instanceof sass.SassString) {
-    return new sass.types.String(object.text);
+    return new sass.types.String(object.getValue());
   }
   if (object instanceof sass.SassList || List.isList(object)) {
     const list = new sass.types.List(
@@ -59,14 +55,12 @@ const toLegacy2 = (object) => {
   }
   return object.NULL;
 };
-module.exports = (sass, tailwindConfig) => {
-  const functions = sassThemeFn(sass, tailwindConfig);
-  const [[themeFnKey, themeFn], [screenFnKey, screenFn], [escapeFnKey]] =
-    Object.entries(functions);
-  const newFunctions = {
-    [themeFnKey]: (args) => toModern(themeFn(...args.map(toLegacy2))),
-    [screenFnKey]: (args) => toModern(screenFn(...args.map(toLegacy2))),
-    [escapeFnKey]: ([str]) => new sass.SassString(escapeClassName(str.text)),
-  };
-  return newFunctions;
+
+module.exports = (functions) => {
+  return Object.entries(functions).reduce((modern, [name, fn]) => {
+    return {
+      ...modern,
+      [name]: (args) => toModern(fn(...args.map(toLegacy))),
+    };
+  }, {});
 };
